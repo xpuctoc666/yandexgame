@@ -1,18 +1,12 @@
 {
-  "title_ru": "Словесные Былины",
-  "title_en": "Word Epics",
-  "short_description_ru": "Словесная головоломка в славянском фэнтези. Составляйте слова из букв и сражайтесь с персонажами русских сказок!",
-  "short_description_en": "Word puzzle in Slavic fantasy. Form words from letters and battle characters from Russian fairy tales!",
-  "description_ru": "«Словесные Былины» — это захватывающая словесная головоломка, погружающая вас в мир славянского фэнтези. Составляйте слова из букв на игровом поле, чтобы сражаться с Лешим, Бабой-Ягой, Змеем Горынычем и другими персонажами русского фольклора.\n\nОсобенности:\n• 250+ уровней с постепенным усложнением\n• Эпические битвы с боссами каждые 10 уровней\n• Два боевых пропуска: бесплатный и премиум\n• Ежедневные задания и награды\n• Славянская стилистика и атмосфера\n• Подходит для ПК и мобильных устройств\n\nСоставляйте длинные слова, чтобы наносить больше урона! Используйте золотые буквы для двойной силы. Открывайте новые скины, эмодзи и бустеры через боевой пропуск.",
-  "description_en": "Word Epics is an engaging word puzzle that immerses you in the world of Slavic fantasy. Form words from letters on the game board to battle Leshy, Baba Yaga, Zmey Gorynych, and other characters from Russian folklore.\n\nFeatures:\n• 250+ levels with gradual difficulty increase\n• Epic boss battles every 10 levels\n• Two battle passes: free and premium\n• Daily quests and rewards\n• Slavic styling and atmosphere\n• Suitable for PC and mobile devices\n\nForm longer words to deal more damage! Use golden letters for double power. Unlock new skins, emojis, and boosters through the battle pass.",
-  "how_to_play_ru": "1. На экране боя вы видите поле 5×6 с буквами.\n2. Соединяйте соседние буквы, чтобы составить слово.\n3. Чем длиннее слово — тем больше урона врагу.\n4. Буквы с пометкой ✨ дают бонус к урону.\n5. Побеждайте врагов, чтобы перейти на следующий уровень.\n6. Собирайте монеты и открывайте награды в боевом пропуске.",
-  "how_to_play_en": "1. On the battle screen you see a 5×6 board with letters.\n2. Connect adjacent letters to form a word.\n3. The longer the word — the more damage to the enemy.\n4. Letters marked ✨ give bonus damage.\n5. Defeat enemies to advance to the next level.\n6. Collect coins and unlock rewardsin the battle pass.",
-  "tags_ru": ["словесная игра", "головоломка", "славянское фэнтези", "слова из буков", "рксские сказки", "казуальная игра"],
-  "tags_en": ["word game", "puzzle", "Slavic fantasy", "word search", "Russian folklore", "casual game"],
-  "keywords_ru": "словесные былины, игра слова, славянское фэнтези, головоломка, буквы, русские сказки, battle pass, Яндекс Игры",
-  "keywords_en": "word epics, word game, slavic fantasy, puzzle, letters, russian fairy tales, battle pass, yandex games",
+  "title": "Словесные Былины",
+  "short_description": "Словесная головоломка в славянском фэнтези. Составляйте слова из букв и сражайтесь с персонажами русских сказок!",
+  "description": "«Словесные Былины» — это захватывающая словесная головоломка, погружающая вас в мир славянского фэнтези. Составляйте слова из букв на игровом поле, чтобы сражаться с Лешим, Бабой-Ягой, Змеем Горынычем и другими персонажами русского фольклора.\n\nОсобенности:\n• 250+ уровней с постепенным усложнением\n• Эпические битвы с боссами каждые 10 уровней\n• Два боевых пропуска: бесплатный и премиум\n• Ежедневные задания и награды\n• Славянская стилистика и атмосфера\n• Подходит для ПК и мобильных устройств\n\nСоставляйте длинные слова, чтобы наносить больше урона! Используйте золотые буквы для двойной силы. Открывайте новые скины, эмодзи и бустеры через боевой пропуск.",
+  "how_to_play": "1. На экране боя вы видите поле 5×6 с буквами.\n2. Соединяйте соседние буквы, чтобы составить слово.\n3. Чем длиннее слово — тем больше урона врагу.\n4. Буквы с пометкой ✨ дают бонус к урону.\n5. Побеждайте врагов, чтобы перейти на следующий уровень.\n6. Собирайте монеты и открывайте награды в боевом пропуске.",
+  "tags": ["словесная игра", "головоломка", "славянское фэнтези", "слова из букв", "русские сказки", "казуальная игра"],
+  "keywords": "словесные былины, игра слова, славянское фэнтези, головоломка, буквы, русские сказки, battle pass, Яндекс Игры",
   "category": "word_puzzle",
   "platform": "HTML5",
   "orientation": "portrait",
-  "controls": "touch /mouse"
+  "controls": "touch / mouse"
 }

@@ -16,21 +16,11 @@ async function initYandexSDK() {
             // Get player info
             yandexPlayer = await yandexSDK.getPlayer({ scopes: false });
 
-            // Get environment for auto language detection (п.2.14 требований)
+            // Get environment for language detection
             const environment = await yandexSDK.getEnvironment();
-            const lang = environment.i18n ? environment.i18n.lang : null;
-            
-            if (lang) {
-                const detectedLang = lang.startsWith('ru') ? 'ru' : 'en';
-                // Don't override user's manual choice in localStorage
-                if (!localStorage.getItem('game_lang')) {
-                    currentLang = detectedLang;
-                    const langSelect = document.getElementById('lang-select');
-                    if (langSelect) langSelect.value = detectedLang;
-                    applyLanguage();
-                    console.log('[Yandex SDK] Auto-detected language:', detectedLang);
-                }
-            }
+            // Always use Russian — игра только на русском языке
+            currentLang = 'ru';
+            console.log('[Yandex SDK] Язык: русский');
 
             isYandexReady = true;
             console.log('[Yandex SDK] Initialized successfully');
