@@ -11,24 +11,24 @@ const BATTLE_PASS_CONFIG = {
     freeRewards: [
         { level: 1, icon: '🎨', nameKey: 'reward_skin', type: 'skin' },
         { level: 3, icon: '😊', nameKey: 'reward_emoji', type: 'emoji' },
-        { level: 5, icon: '⚡', nameKey: 'reward_booster', type: 'booster' },
+        { level: 5, icon: '💡', nameKey: 'reward_hint', type: 'hint' },
         { level: 7, icon: '🪙', nameKey: 'reward_coins', type: 'coins', amount: 50 },
         { level: 10, icon: '✨', nameKey: 'reward_golden_letters', type: 'golden_letters' },
         { level: 12, icon: '😄', nameKey: 'reward_emoji', type: 'emoji' },
         { level: 15, icon: '🪙', nameKey: 'reward_coins', type: 'coins', amount: 75 },
-        { level: 18, icon: '⚡', nameKey: 'reward_booster', type: 'booster' },
+        { level: 18, icon: '↩️', nameKey: 'reward_undo', type: 'undo' },
         { level: 20, icon: '🎨', nameKey: 'reward_skin', type: 'skin' },
         { level: 22, icon: '😆', nameKey: 'reward_emoji', type: 'emoji' },
         { level: 25, icon: '🪙', nameKey: 'reward_coins', type: 'coins', amount: 100 },
-        { level: 28, icon: '⚡', nameKey: 'reward_booster', type: 'booster' },
+        { level: 28, icon: '🔀', nameKey: 'reward_shuffle', type: 'shuffle' },
         { level: 30, icon: '✨', nameKey: 'reward_golden_letters', type: 'golden_letters' },
         { level: 33, icon: '😎', nameKey: 'reward_emoji', type: 'emoji' },
         { level: 35, icon: '🪙', nameKey: 'reward_coins', type: 'coins', amount: 150 },
-        { level: 38, icon: '⚡', nameKey: 'reward_booster', type: 'booster' },
+        { level: 38, icon: '💡', nameKey: 'reward_hint', type: 'hint' },
         { level: 40, icon: '🎨', nameKey: 'reward_skin', type: 'skin' },
         { level: 43, icon: '🤩', nameKey: 'reward_emoji', type: 'emoji' },
         { level: 45, icon: '🪙', nameKey: 'reward_coins', type: 'coins', amount: 200 },
-        { level: 48, icon: '⚡', nameKey: 'reward_booster', type: 'booster' },
+        { level: 48, icon: '↩️', nameKey: 'reward_undo', type: 'undo' },
         { level: 50, icon: '🏆', nameKey: 'reward_golden_letters', type: 'golden_letters' }
     ],
 
@@ -190,8 +190,11 @@ async function watchAd() {
         const watched = await showRewardedAd();
         if (watched) {
             addXP(1);
+            gameState.boosts.hint += 1;
+            gameState.boosts.shuffle += 1;
+            saveGameState();
             updateQuest('watch_ad', 1);
-            showToast('📺 +1 XP!');
+            showToast('📺 +1 XP, +1 💡 подсказка, +1 🔀 перемешивание!');
         }
     } catch (err) {
         console.warn('Ad error:', err);
@@ -293,6 +296,20 @@ function collectReward(track, level) {
             gameState.maxMana = 100;
             saveGameState();
         }
+    }
+
+    // Бусты (подсказка / отмена / перемешивание)
+    if (reward.type === 'hint') {
+        gameState.boosts.hint += 1;
+        saveGameState();
+    }
+    if (reward.type === 'undo') {
+        gameState.boosts.undo += 1;
+        saveGameState();
+    }
+    if (reward.type === 'shuffle') {
+        gameState.boosts.shuffle += 1;
+        saveGameState();
     }
 
     saveBattlePassState();
