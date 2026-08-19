@@ -3,9 +3,9 @@
 // Словесные Былины (Word Epics)
 // ============================================
 
-// Enemy definitions
+// Враги: 16 обычных + 7 боссов = 23 персонажа
 const ENEMIES = {
-    // Common enemies (appear regularly)
+    // --- Обычные враги (16) ---
     leshy: {
         id: 'leshy',
         name: 'enemy_leshy',
@@ -70,8 +70,72 @@ const ENEMIES = {
         power: 9,
         desc: 'Свистом сбивает с ног'
     },
+    ovinnik: {
+        id: 'ovinnik',
+        name: 'enemy_ovinnik',
+        emoji: '🐓',
+        hp: 48,
+        power: 5,
+        desc: 'Дух овина, шумит по ночам'
+    },
+    bannik: {
+        id: 'bannik',
+        name: 'enemy_bannik',
+        emoji: '🧖',
+        hp: 42,
+        power: 4,
+        desc: 'Дух бани, ошпаривает паром'
+    },
+    polevoy: {
+        id: 'polevoy',
+        name: 'enemy_polevoy',
+        emoji: '🌾',
+        hp: 52,
+        power: 6,
+        desc: 'Дух полей, сбивает с пути'
+    },
+    likho: {
+        id: 'likho',
+        name: 'enemy_likho',
+        emoji: '👁️',
+        hp: 65,
+        power: 8,
+        desc: 'Одноглазое Лихо, несёт беду'
+    },
+    chort: {
+        id: 'chort',
+        name: 'enemy_chort',
+        emoji: '😈',
+        hp: 58,
+        power: 7,
+        desc: 'Чёрт с рогами, лукавый бес'
+    },
+    vurdalak: {
+        id: 'vurdalak',
+        name: 'enemy_vurdalak',
+        emoji: '🧟',
+        hp: 62,
+        power: 8,
+        desc: 'Восставший из могилы кровосос'
+    },
+    shishiga: {
+        id: 'shishiga',
+        name: 'enemy_shishiga',
+        emoji: '👺',
+        hp: 44,
+        power: 5,
+        desc: 'Болотная нечисть, морочит путников'
+    },
+    morok: {
+        id: 'morok',
+        name: 'enemy_morok',
+        emoji: '🌫️',
+        hp: 50,
+        power: 6,
+        desc: 'Дух наваждения, туманит разум'
+    },
 
-    // Bosses (every 10 levels)
+    // --- Боссы (7) ---
     baba_yaga: {
         id: 'baba_yaga',
         name: 'enemy_baba_yaga',
@@ -144,34 +208,136 @@ const ENEMIES = {
     }
 };
 
-// Word lists for generating letter boards
-const WORD_BANK = {
-    // Common Russian words by length
-    easy: [
-        'дом', 'лес', 'мир', 'дуб', 'сад', 'рот', 'нос', 'глаз',
-        'ухо', 'рот', 'сон', 'ток', 'сок', 'рак', 'лак', 'мак',
-        'река', 'гора', 'луна', 'зима', 'вера', 'рука', 'душа',
-        'слово', 'сердце', 'дорога', 'дерево', 'чудеса', 'богатырь',
-        'славяне', 'русичи', 'перун', 'велес', 'сварог', 'даждьбог'
-    ],
-    medium: [
-        'берёза', 'калина', 'рябина', 'трава', 'цветы', 'роса',
-        'утреня', 'вечер', 'звезда', 'месяц', 'солнце', 'небо',
-        'облака', 'ветер', 'гроза', 'радуга', 'иней', 'снега',
-        'славяне', 'былина', 'сказка', 'преданье', 'колдун',
-        'чародей', 'вещунья', 'ладанка', 'оберег', 'наговор'
-    ],
-    hard: [
-        'богатырство', 'чужеродец', 'странствие', 'превращение',
-        'заколдованный', 'зачарованный', 'непобедимый', 'сокровенный',
-        'древнерусский', 'православие', 'язычество', 'жертвоприношение',
-        'воскресение', 'путешествие', 'приключение', 'бессмертие',
-        'вдохновение', 'созерцание', 'рассвет', 'сумерки', 'полночь',
-        'испытание', 'предназначение', 'откровение', 'повествование'
-    ]
-};
+// Частотный алфавит для генерации досок (без Ё, Ъ, Ь — для чистоты букв)
+const LETTER_POOL =
+    'ААААААААА' +
+    'ООООООООО' +
+    'ЕЕЕЕЕЕЕЕ' +
+    'ИИИИИИИ' +
+    'ННННННН' +
+    'ТТТТТТ' +
+    'СССССС' +
+    'РРРРРР' +
+    'ВВВВВ' +
+    'ЛЛЛЛЛ' +
+    'ККККК' +
+    'ММММ' +
+    'ДДДД' +
+    'ПППП' +
+    'УУУУ' +
+    'ЯЯЯ' +
+    'ЫЫЫ' +
+    'ЗЗЗ' +
+    'БББ' +
+    'ГГГ' +
+    'ЧЧ' +
+    'ЙЙ' +
+    'ХХ' +
+    'ЖЖ' +
+    'ШШ' +
+    'ЮЮ' +
+    'ЦЦ' +
+    'ЩЩ' +
+    'ЭЭ' +
+    'ФФ';
 
-// Generate level data for 250+ levels
+function randomLetter() {
+    return LETTER_POOL[Math.floor(Math.random() * LETTER_POOL.length)];
+}
+
+// Выбрать слово-цель из словаря, которое гарантированно соберётся на доске
+function pickTargetWord(minLen, totalCells) {
+    const maxLen = Math.min(8, totalCells);
+    const candidates = RUSSIAN_DICTIONARY.filter(w =>
+        w.length >= minLen && w.length <= maxLen
+    );
+    if (!candidates.length) return null;
+    return candidates[Math.floor(Math.random() * candidates.length)];
+}
+
+// Гарантировать решаемость: записать буквы слова-цели в случайные разные клетки
+function injectTargetWord(cells, minLen) {
+    const totalCells = cells.length;
+    const word = pickTargetWord(minLen, totalCells);
+    if (!word) return;
+
+    // Выбираем len(word) разных случайных клеток
+    const indices = [...Array(totalCells).keys()];
+    for (let i = indices.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [indices[i], indices[j]] = [indices[j], indices[i]];
+    }
+
+    for (let k = 0; k < word.length; k++) {
+        const cell = cells[indices[k]];
+        cell.letter = word[k].toUpperCase();
+        cell.special = false;
+        cell.golden = false;
+        cell.used = false;
+    }
+}
+
+// Генерация букв для доски уровня (доска всегда решаема)
+function generateBoardLetters(level) {
+    const totalCells = level.board.rows * level.board.cols;
+    const cells = [];
+
+    for (let i = 0; i < totalCells; i++) {
+        cells.push({
+            letter: randomLetter(),
+            id: `cell-${i}`,
+            special: false,
+            golden: false,
+            used: false,
+            selected: false
+        });
+    }
+
+    // Гарантируем, что на доске есть хотя бы одно слово из словаря
+    injectTargetWord(cells, level.minWordLength);
+
+    // Золотые и особые клетки для верхних уровней
+    const specialCount = level.id > 20 ? Math.min(3, Math.floor(level.id / 20)) : 0;
+    let placed = 0;
+    while (placed < specialCount) {
+        const idx = Math.floor(Math.random() * totalCells);
+        const cell = cells[idx];
+        if (!cell.special && !cell.golden) {
+            if (Math.random() > 0.5) {
+                cell.golden = true;
+            } else {
+                cell.special = true;
+            }
+            placed++;
+        }
+    }
+
+    return cells;
+}
+
+// Пополнить использованные клетки новыми буквами (после составленного слова)
+function refillBoardLetters(usedIndices) {
+    usedIndices.forEach(index => {
+        const cell = currentBoard[index];
+        if (!cell) return;
+        cell.letter = randomLetter();
+        cell.special = false;
+        cell.golden = false;
+        cell.used = false;
+        cell.selected = false;
+    });
+
+    // После пополнения снова гарантируем решаемость доски
+    injectTargetWord(currentBoard, currentLevel.minWordLength);
+}
+
+// Проверка слова по словарю (только от 3 букв)
+function isValidWord(word) {
+    if (!word || word.length < 3) return false;
+    return isInDictionary(word);
+}
+
+// Генерация данных уровней (250+)
 function generateLevels() {
     const levels = [];
     const enemyKeys = Object.keys(ENEMIES);
@@ -183,12 +349,12 @@ function generateLevels() {
         let difficulty = 'easy';
         let boardCols = 5;
         let boardRows = 5;
-        let minWordLength = 2;
+        let minWordLength = 3;
 
-        // Determine difficulty
+        // Сложность по уровню
         if (levelNum <= 50) {
             difficulty = 'easy';
-            minWordLength = 2;
+            minWordLength = 3;
             boardRows = 5;
         } else if (levelNum <= 100) {
             difficulty = 'easy';
@@ -208,7 +374,7 @@ function generateLevels() {
             boardRows = 6;
         }
 
-        // Check for boss levels (every 10 levels)
+        // Боссы каждые 10 уровней
         if (levelNum % 10 === 0) {
             isBoss = true;
             const bossKeys = enemyKeys.filter(k => ENEMIES[k].boss);
@@ -216,13 +382,15 @@ function generateLevels() {
             minWordLength = Math.max(minWordLength, 4);
         } else {
             const commonKeys = enemyKeys.filter(k => !ENEMIES[k].boss);
-            const poolIndex = levelNum % commonKeys.length;
-            enemyKey = commonKeys[poolIndex];
+            enemyKey = commonKeys[levelNum % commonKeys.length];
         }
 
         const enemy = ENEMIES[enemyKey];
         const hpScale = isBoss ? 1 : 1 + (levelNum * 0.01);
         const powerScale = 1 + (levelNum * 0.005);
+
+        // Лимит ходов: 18 → 9 с ростом уровня
+        const maxMoves = Math.max(9, 18 - Math.floor((levelNum - 1) / 10));
 
         levels.push({
             id: levelNum,
@@ -239,6 +407,7 @@ function generateLevels() {
             },
             difficulty,
             minWordLength,
+            maxMoves,
             rewards: {
                 coins: 5 + levelNum,
                 xp: 2 + Math.floor(levelNum / 5)
@@ -249,7 +418,7 @@ function generateLevels() {
     return levels;
 }
 
-// The levels array
+// Массив уровней
 let LEVELS = null;
 
 function initLevels() {
@@ -259,91 +428,20 @@ function initLevels() {
     return LEVELS;
 }
 
-// Get letters for a specific level board
-function generateBoardLetters(level) {
-    const totalCells = level.board.rows * level.board.cols;
-    const letters = [];
-    const wordList = WORD_BANK[level.difficulty] || WORD_BANK.easy;
-
-    // Take some letters from relevant words
-    const sourceWords = [];
-    for (let i = 0; i < 3; i++) {
-        const word = wordList[Math.floor(Math.random() * wordList.length)];
-        sourceWords.push(word);
-    }
-
-    const sourceText = sourceWords.join('').toUpperCase();
-
-    // Fill board with letters from source words + random consonants/vowels
-    const vowels = 'АЕЁИОУЫЭЮЯ';
-    const consonants = 'БВГДЖЗЙКЛМНПРСТФХЦЧШЩЬЪ';
-
-    for (let i = 0; i < totalCells; i++) {
-        if (i < sourceText.length && Math.random() > 0.3) {
-            letters.push(sourceText[i]);
-        } else {
-            // Random letter with vowel/consonant balance
-            if (letters.filter(l => vowels.includes(l)).length / totalCells < 0.3) {
-                letters.push(vowels[Math.floor(Math.random() * vowels.length)]);
-            } else {
-                letters.push(consonants[Math.floor(Math.random() * consonants.length)]);
-            }
-        }
-    }
-
-    // Shuffle
-    for (let i = letters.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [letters[i], letters[j]] = [letters[j], letters[i]];
-    }
-
-    // Add some special letters for higher levels
-    const specialPositions = new Set();
-    if (level.id > 20) {
-        const specialCount = Math.min(3, Math.floor(level.id / 20));
-        while (specialPositions.size < specialCount) {
-            specialPositions.add(Math.floor(Math.random() * totalCells));
-        }
-    }
-
-    const result = letters.map((letter, index) => {
-        const isSpecial = specialPositions.has(index);
-        const isGolden = isSpecial && Math.random() > 0.5;
-        return {
-            letter,
-            id: `cell-${index}`,
-            special: isSpecial,
-            golden: isGolden,
-            used: false
-        };
-    });
-
-    return result;
-}
-
-// Check if word exists in dictionary (simplified)
-function isValidWord(word) {
-    if (word.length < 2) return false;
-    // In real implementation, this would check against a dictionary
-    // For now, accept any word of 2+ letters
-    const allWords = [...WORD_BANK.easy, ...WORD_BANK.medium, ...WORD_BANK.hard];
-    return allWords.some(w => w.toUpperCase() === word.toUpperCase()) || word.length >= 2;
-}
-
-// Calculate damage based on word
+// Расчёт урона по слову
 function calculateDamage(word, level) {
     const length = word.length;
     let damage = length * 3;
 
-    // Rare letters do more damage
-    const rareLetters = 'ЪЬЭЮЯФХЦЧШЩ';
+    // Редкие буквы дают больше урона
+    const rareLetters = 'ЭЮЯФХЦЧШЩЫ';
     for (const char of word.toUpperCase()) {
         if (rareLetters.includes(char)) {
             damage += 2;
         }
     }
 
-    // Longer words get bonus
+    // Бонус за длинные слова
     if (length >= 5) damage *= 1.5;
     if (length >= 7) damage *= 2;
 

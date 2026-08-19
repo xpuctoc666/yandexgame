@@ -85,6 +85,9 @@
             <div class="battle-score">
                 <span data-lang="score">Счёт</span>: <span id="battle-score">0</span>
             </div>
+            <div class="battle-moves">
+                <span data-lang="moves">Ходы</span>: <span id="battle-moves">0</span>
+            </div>
         </div>
         <div class="battle-area">
             <div class="enemy-area">
@@ -108,6 +111,12 @@
                     <button class="submit-btn" onclick="submitWord()">
                         <span data-lang="attack">Атаковать!</span> ⚔️
                     </button>
+                </div>
+                <div class="boost-bar">
+                    <button class="boost-btn" id="boost-hint" onclick="useHint()" title="Подсказка">💡 <span id="hint-count">3</span></button>
+                    <button class="boost-btn" id="boost-undo" onclick="useUndo()" title="Отменить ход">↩️ <span id="undo-count">5</span></button>
+                    <button class="boost-btn" id="boost-shuffle" onclick="useShuffle()" title="Перемешать буквы">🔀 <span id="shuffle-count">1</span></button>
+                    <button class="boost-btn advert" id="boost-ad" onclick="watchAdForBoost()" title="Реклама за бусты">📺 +</button>
                 </div>
                 <div class="found-words" id="found-words"></div>
             </div>
@@ -172,10 +181,29 @@
             <div class="victory-rewards">
                 <p>+<span id="victory-coins">10</span> <span data-lang="coins">монет</span></p>
                 <p>+<span id="victory-exp">5</span> XP</p>
+                <p>📜 <span data-lang="words_found">Найдено слов</span>: <span id="victory-words">0</span></p>
             </div>
             <div class="victory-buttons">
                 <button class="menu-btn primary" onclick="nextLevel()">
                     <span data-lang="next_level">Следующий уровень</span> →
+                </button>
+                <button class="menu-btn secondary" onclick="showScreen('level-select')">
+                    <span data-lang="back_to_menu">К уровням</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Defeat Screen -->
+    <div id="defeat-screen" class="screen">
+        <div class="victory-content">
+            <div class="defeat-animation">💀</div>
+            <h2 data-lang="defeat">Поражение!</h2>
+            <p class="defeat-text" data-lang="defeat_text">Ходы закончились. Попробуй ещё раз!</p>
+            <p class="defeat-level"><span data-lang="level">Уровень</span> <span id="defeat-level">1</span></p>
+            <div class="victory-buttons">
+                <button class="menu-btn primary" onclick="retryLevel()">
+                    🔄 <span data-lang="retry">Повторить уровень</span>
                 </button>
                 <button class="menu-btn secondary" onclick="showScreen('level-select')">
                     <span data-lang="back_to_menu">К уровням</span>
@@ -222,6 +250,7 @@
 
     <script src="js/localization.js"></script>
     <script src="js/yandex.js"></script>
+    <script src="js/dictionary.js"></script>
     <script src="js/levels.js"></script>
     <script src="js/combat.js"></script>
     <script src="js/battlepass.js"></script>

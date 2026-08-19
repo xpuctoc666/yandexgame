@@ -14,9 +14,14 @@ const TEXTS = {
     pass_level: "Пропуск",
     select_level: "Выбор уровня",
     score: "Счёт",
+    moves: "Ходы",
     your_word: "Ваше слово",
     attack: "Атаковать!",
     victory: "Победа!",
+    defeat: "Поражение!",
+    defeat_text: "Ходы закончились. Попробуй ещё раз!",
+    retry: "Повторить уровень",
+    words_found: "Найдено слов",
     next_level: "Следующий уровень",
     back_to_menu: "К уровням",
 
@@ -45,6 +50,14 @@ const TEXTS = {
     enemy_vii: "Вий",
     enemy_firebird: "Жар-птица",
     enemy_morskoy: "Морской Царь",
+    enemy_ovinnik: "Овинник",
+    enemy_bannik: "Банник",
+    enemy_polevoy: "Полевой",
+    enemy_likho: "Лихо Одноглазое",
+    enemy_chort: "Чёрт",
+    enemy_vurdalak: "Вурдалак",
+    enemy_shishiga: "Шишига",
+    enemy_morok: "Морок",
 
     // Боевые эффекты
     damage: "Урон",
@@ -80,6 +93,9 @@ const TEXTS = {
     reward_xp_boost: "Ускорение XP",
     reward_mana_boost: "Увеличение маны",
     reward_rare_emoji: "Редкий эмодзи",
+    reward_hint: "Подсказка ×1",
+    reward_undo: "Отмена ×1",
+    reward_shuffle: "Перемешивание ×1",
 };
 
 function getText(key) {

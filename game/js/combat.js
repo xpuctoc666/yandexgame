@@ -9,6 +9,12 @@ let currentBoard = null;
 let selectedCells = [];
 let currentWord = '';
 let foundWords = [];
+let currentMoves = 0;
+let maxMoves = 0;
+let lastSnapshot = null;
+let enemyTurnTimeout = null;
+let endTimeout = null;
+
 let gameState = {
     level: 1,
     coins: 0,
@@ -19,7 +25,8 @@ let gameState = {
     doubleCoins: false,
     xpBoost: false,
     completedLevels: {},
-    stars: {}
+    stars: {},
+    boosts: { hint: 3, undo: 5, shuffle: 1 }
 };
 
 function initGameState() {
@@ -28,6 +35,10 @@ function initGameState() {
         try {
             const parsed = JSON.parse(saved);
             gameState = { ...gameState, ...parsed };
+            // Гарантируем наличие бустов (для старых сохранений)
+            if (!gameState.boosts) {
+                gameState.boosts = { hint: 3, undo: 5, shuffle: 1 };
+            }
         } catch (e) {
             console.warn('Failed to load game state');
         }
@@ -37,7 +48,6 @@ function initGameState() {
 
 function saveGameState() {
     localStorage.setItem('game_progress', JSON.stringify(gameState));
-    // Also try to save to Yandex cloud
     if (typeof saveProgress === 'function') {
         saveProgress(gameState);
     }
@@ -64,8 +74,15 @@ function startLevel(levelId) {
     selectedCells = [];
     currentWord = '';
     foundWords = [];
+    lastSnapshot = null;
+    maxMoves = currentLevel.maxMoves;
+    currentMoves = maxMoves;
 
-    // Generate board
+    // Полное восстановление здоровья перед боем
+    gameState.hp = gameState.maxHp;
+    gameState.mana = gameState.maxMana;
+
+    // Генерация доски (всегда решаема)
     currentBoard = generateBoardLetters(currentLevel);
 
     showScreen('battle-screen');
@@ -73,24 +90,25 @@ function startLevel(levelId) {
 }
 
 function renderBattle() {
-    // Level info
+    // Информация об уровне
     document.getElementById('battle-level').textContent = currentLevel.id;
     document.getElementById('battle-score').textContent = foundWords.length;
+    document.getElementById('battle-moves').textContent = currentMoves;
 
-    // Enemy
+    // Враг
     document.getElementById('enemy-sprite').textContent = currentEnemy.emoji;
     document.getElementById('enemy-name').textContent = getText(currentEnemy.name);
-    
+
     const hpPercent = (currentEnemy.currentHp / currentEnemy.maxHp) * 100;
     document.getElementById('enemy-health-fill').style.width = `${hpPercent}%`;
-    document.getElementById('enemy-hp-text').textContent = 
+    document.getElementById('enemy-hp-text').textContent =
         `HP: ${currentEnemy.currentHp}/${currentEnemy.maxHp}`;
 
-    // Player
+    // Игрок
     document.getElementById('player-health').textContent = gameState.hp;
     document.getElementById('player-mana').textContent = gameState.mana;
 
-    // Letter board
+    // Доска букв
     const board = document.getElementById('letter-board');
     board.innerHTML = '';
     board.style.gridTemplateColumns = `repeat(${currentLevel.board.cols}, 1fr)`;
@@ -99,6 +117,7 @@ function renderBattle() {
         const div = document.createElement('div');
         div.className = 'letter-cell';
         if (cell.selected) div.classList.add('selected');
+        if (cell.hint) div.classList.add('hint');
         if (cell.special) div.classList.add('special');
         if (cell.used) div.classList.add('used');
         if (cell.golden) div.style.color = 'var(--color-gold)';
@@ -108,10 +127,10 @@ function renderBattle() {
         board.appendChild(div);
     });
 
-    // Current word
+    // Текущее слово
     document.getElementById('current-word').textContent = currentWord || '...';
 
-    // Found words
+    // Найденные слова
     const foundContainer = document.getElementById('found-words');
     foundContainer.innerHTML = '';
     foundWords.forEach(word => {
@@ -121,17 +140,43 @@ function renderBattle() {
         foundContainer.appendChild(tag);
     });
 
-    // Update enemy sprite animation
+    // Бусты
+    renderBoostBar();
+
+    // Кнопка атаки
+    const submitBtn = document.querySelector('.submit-btn');
+    if (submitBtn) {
+        submitBtn.disabled = currentWord.length < currentLevel.minWordLength;
+    }
+
+    // Анимация врага
     const enemySprite = document.getElementById('enemy-sprite');
     enemySprite.classList.remove('hit');
 }
 
+function renderBoostBar() {
+    const hintEl = document.getElementById('hint-count');
+    const undoEl = document.getElementById('undo-count');
+    const shuffleEl = document.getElementById('shuffle-count');
+    if (hintEl) hintEl.textContent = gameState.boosts.hint;
+    if (undoEl) undoEl.textContent = gameState.boosts.undo;
+    if (shuffleEl) shuffleEl.textContent = gameState.boosts.shuffle;
+
+    const hintBtn = document.getElementById('boost-hint');
+    const undoBtn = document.getElementById('boost-undo');
+    const shuffleBtn = document.getElementById('boost-shuffle');
+    if (hintBtn) hintBtn.disabled = gameState.boosts.hint <= 0;
+    if (undoBtn) undoBtn.disabled = gameState.boosts.undo <= 0 || !lastSnapshot;
+    if (shuffleBtn) shuffleBtn.disabled = gameState.boosts.shuffle <= 0;
+}
+
+// Выбор буквы: в любом порядке, выбранная «поднимается»
 function selectCell(index) {
     const cell = currentBoard[index];
     if (!cell || cell.used) return;
 
     if (cell.selected) {
-        // Deselect: remove from selection and all after it
+        // Повторное нажатие — отмена выбора и всего, что после него
         const selIndex = selectedCells.indexOf(index);
         if (selIndex !== -1) {
             const toRemove = selectedCells.splice(selIndex);
@@ -139,24 +184,17 @@ function selectCell(index) {
                 currentBoard[i].selected = false;
             });
             currentWord = selectedCells.map(i => currentBoard[i].letter).join('');
+            if (typeof playSound === 'function') playSound('select');
         }
-    } else if (selectedCells.length === 0 || isAdjacent(selectedCells[selectedCells.length - 1], index)) {
-        // Select cell if adjacent to last
+    } else {
+        // Любая клетка в любом порядке
         cell.selected = true;
         selectedCells.push(index);
         currentWord += cell.letter;
+        if (typeof playSound === 'function') playSound('select');
     }
 
     renderBattle();
-}
-
-function isAdjacent(idx1, idx2) {
-    const cols = currentLevel.board.cols;
-    const r1 = Math.floor(idx1 / cols);
-    const c1 = idx1 % cols;
-    const r2 = Math.floor(idx2 / cols);
-    const c2 = idx2 % cols;
-    return Math.abs(r1 - r2) <= 1 && Math.abs(c1 - c2) <= 1 && !(r1 === r2 && c1 === c2);
 }
 
 function submitWord() {
@@ -165,71 +203,75 @@ function submitWord() {
         return;
     }
 
-    // Check if word already found
     if (foundWords.includes(currentWord)) {
         showToast('⚠️ Слово уже использовано');
         clearSelection();
         return;
     }
 
-    // Check if valid (simplified - accept any word of sufficient length)
     if (!isValidWord(currentWord)) {
         showToast(`❌ ${getText('word_not_found')}`);
         clearSelection();
         return;
     }
 
-    // Calculate damage
+    // Снимок для буста «отмена»
+    takeSnapshot();
+
+    // Расчёт урона
     let damage = calculateDamage(currentWord, currentLevel);
-    
-    // Apply golden letter bonuses
+
+    // Золотые буквы удваивают урон
     selectedCells.forEach(index => {
         if (currentBoard[index].golden) {
             damage *= 2;
         }
     });
 
-    // Apply double coins boost from premium
+    // Премиум-бонусы
     let coinsReward = currentLevel.rewards.coins;
     if (gameState.doubleCoins) {
         coinsReward *= 2;
         damage = Math.round(damage * 1.2);
     }
 
-    // Deal damage
+    // Наносим урон
     currentEnemy.currentHp -= damage;
     if (currentEnemy.currentHp < 0) currentEnemy.currentHp = 0;
 
-    // Animate hit
+    // Анимация удара
     const enemySprite = document.getElementById('enemy-sprite');
     enemySprite.classList.add('hit');
     setTimeout(() => enemySprite.classList.remove('hit'), 300);
+    if (typeof playSound === 'function') playSound('attack');
 
-    // Show damage
-    showToast(`⚔️ ${damage} уронa!`);
+    showToast(`⚔️ ${damage} урона!`);
 
-    // Add word to found list
+    // Фиксируем слово
     foundWords.push(currentWord);
+
+    // Использованные клетки заменяем новыми буквами
+    const usedIndices = [...selectedCells];
+    refillBoardLetters(usedIndices);
+
     currentWord = '';
     selectedCells = [];
+    currentMoves--;
 
-    // Mark cells as used
-    // Regen some mana
+    // Немного маны
     gameState.mana = Math.min(gameState.maxMana, gameState.mana + 2);
 
-    // Enemy turn
-    if (currentEnemy.currentHp > 0) {
-        setTimeout(() => enemyTurn(), 500);
-    } else {
-        // Victory!
-        setTimeout(() => victory(), 500);
-    }
-
-    // Update quests
+    // Квесты
     updateQuest('use_long_words', 1);
     updateQuest('earn_coins', damage);
 
     renderBattle();
+
+    if (currentEnemy.currentHp <= 0) {
+        endTimeout = setTimeout(() => victory(), 500);
+    } else {
+        enemyTurnTimeout = setTimeout(() => enemyTurn(), 600);
+    }
 }
 
 function clearSelection() {
@@ -241,6 +283,157 @@ function clearSelection() {
     renderBattle();
 }
 
+function takeSnapshot() {
+    lastSnapshot = {
+        enemyHp: currentEnemy.currentHp,
+        moves: currentMoves,
+        foundWords: [...foundWords],
+        board: currentBoard.map(c => ({
+            letter: c.letter,
+            special: c.special,
+            golden: c.golden,
+            used: c.used,
+            selected: false
+        })),
+        playerHp: gameState.hp,
+        mana: gameState.mana
+    };
+}
+
+function useUndo() {
+    if (gameState.boosts.undo <= 0) {
+        showToast('🔒 Нет отмен! Посмотри рекламу, чтобы получить бусты.');
+        return;
+    }
+    if (!lastSnapshot) {
+        showToast('⚠️ Отменять нечего');
+        return;
+    }
+
+    // Отменяем отложенные действия врага
+    if (enemyTurnTimeout) { clearTimeout(enemyTurnTimeout); enemyTurnTimeout = null; }
+    if (endTimeout) { clearTimeout(endTimeout); endTimeout = null; }
+
+    const snap = lastSnapshot;
+    currentEnemy.currentHp = snap.enemyHp;
+    currentMoves = snap.moves;
+    foundWords = snap.foundWords;
+    gameState.hp = snap.playerHp;
+    gameState.mana = snap.mana;
+    snap.board.forEach((s, i) => {
+        currentBoard[i].letter = s.letter;
+        currentBoard[i].special = s.special;
+        currentBoard[i].golden = s.golden;
+        currentBoard[i].used = s.used;
+        currentBoard[i].selected = false;
+        currentBoard[i].hint = false;
+    });
+    selectedCells = [];
+    currentWord = '';
+    lastSnapshot = null;
+
+    gameState.boosts.undo--;
+    saveGameState();
+    renderBattle();
+    showToast('↩️ Ход отменён');
+}
+
+function useShuffle() {
+    if (gameState.boosts.shuffle <= 0) {
+        showToast('🔒 Нет перемешиваний! Посмотри рекламу, чтобы получить бусты.');
+        return;
+    }
+
+    const letters = currentBoard.map(c => c.letter);
+    for (let i = letters.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [letters[i], letters[j]] = [letters[j], letters[i]];
+    }
+    currentBoard.forEach((cell, i) => {
+        cell.letter = letters[i];
+        cell.selected = false;
+        cell.hint = false;
+    });
+    selectedCells = [];
+    currentWord = '';
+
+    gameState.boosts.shuffle--;
+    saveGameState();
+    renderBattle();
+    showToast('🔀 Буквы перемешаны');
+}
+
+function useHint() {
+    if (gameState.boosts.hint <= 0) {
+        showToast('🔒 Нет подсказок! Посмотри рекламу, чтобы получить бусты.');
+        return;
+    }
+
+    const result = findFormableWord(currentBoard, currentLevel.minWordLength);
+    if (!result) {
+        showToast('🤔 Не нашёл слова на доске...');
+        return;
+    }
+
+    // Подсвечиваем буквы подсказки
+    currentBoard.forEach(c => { c.hint = false; });
+    result.indices.forEach(idx => {
+        currentBoard[idx].hint = true;
+    });
+
+    gameState.boosts.hint--;
+    saveGameState();
+    renderBattle();
+    showToast(`💡 Подсказка: ${result.word}`);
+
+    // Снимаем подсветку через пару секунд
+    setTimeout(() => {
+        currentBoard.forEach(c => { c.hint = false; });
+        if (typeof renderBattle === 'function') renderBattle();
+    }, 2500);
+}
+
+// Найти слово на доске, которое можно собрать (подмножество букв)
+function findFormableWord(cells, minLen) {
+    const available = cells.filter(c => !c.used);
+    const count = {};
+    available.forEach(c => {
+        count[c.letter] = (count[c.letter] || 0) + 1;
+    });
+
+    const candidates = RUSSIAN_DICTIONARY.filter(w => w.length >= minLen);
+    // Сортируем от длинных к коротким — подсказываем самое «дорогое» слово
+    candidates.sort((a, b) => b.length - a.length);
+
+    for (const word of candidates) {
+        const need = {};
+        for (const ch of word.toUpperCase()) {
+            need[ch] = (need[ch] || 0) + 1;
+        }
+        let ok = true;
+        for (const ch in need) {
+            if ((count[ch] || 0) < need[ch]) { ok = false; break; }
+        }
+        if (!ok) continue;
+
+        // Сопоставляем буквы слова с клетками
+        const indices = [];
+        const usedIdx = new Set();
+        for (const ch of word.toUpperCase()) {
+            const cellIndex = available.findIndex((c, i) =>
+                !usedIdx.has(i) && c.letter === ch
+            );
+            if (cellIndex === -1) { ok = false; break; }
+            usedIdx.add(cellIndex);
+            indices.push(available[cellIndex].id ? parseInt(available[cellIndex].id.replace('cell-', ''), 10) : cellIndex);
+        }
+        if (!ok) continue;
+
+        return { word: word.toUpperCase(), indices };
+    }
+    return null;
+}
+
 function enemyTurn() {
     const damage = currentEnemy.power;
     gameState.hp -= damage;
@@ -248,25 +441,29 @@ function enemyTurn() {
 
     showToast(`💥 ${getText(currentEnemy.name)} наносит ${damage} урона!`);
 
-    // Apply enemy ability if boss
+    // Способность босса
     if (currentEnemy.isBoss && currentEnemy.ability) {
         useEnemyAbility(currentEnemy.ability);
     }
 
-    if (gameState.hp <= 0) {
-        showToast('💀 Вы погибли...');
-        setTimeout(() => showScreen('level-select'), 1500);
-    }
-
     renderBattle();
     updateMenuStats();
+
+    // Поражение: кончились ходы или здоровье
+    if (gameState.hp <= 0 || currentMoves <= 0) {
+        if (gameState.hp <= 0) {
+            showToast('💀 Вы погибли...');
+        } else {
+            showToast('⏳ Ходы закончились!');
+        }
+        endTimeout = setTimeout(() => defeat(), 900);
+    }
 }
 
 function useEnemyAbility(ability) {
     switch (ability) {
         case 'poison':
-            // Poison a random letter cell
-            const availCells = currentBoard.filter(c => !c.used);
+            const availCells = currentBoard.filter(c => !c.used && !c.special);
             if (availCells.length > 0) {
                 const target = availCells[Math.floor(Math.random() * availCells.length)];
                 target.special = true;
@@ -274,10 +471,8 @@ function useEnemyAbility(ability) {
             }
             break;
         case 'burn':
-            // Burn a random row
             const row = Math.floor(Math.random() * currentLevel.board.rows);
             showToast(`🔥 Ряд ${row + 1} горит!`);
-            // Mark cells in row
             for (let i = 0; i < currentLevel.board.cols; i++) {
                 const idx = row * currentLevel.board.cols + i;
                 if (currentBoard[idx] && !currentBoard[idx].used) {
@@ -286,7 +481,6 @@ function useEnemyAbility(ability) {
             }
             break;
         case 'shield':
-            // Shield - heal some hp
             const heal = Math.round(currentEnemy.maxHp * 0.05);
             currentEnemy.currentHp = Math.min(currentEnemy.maxHp, currentEnemy.currentHp + heal);
             showToast(`🛡️ ${getText(currentEnemy.name)} восстанавливает ${heal} HP!`);
@@ -295,7 +489,6 @@ function useEnemyAbility(ability) {
 }
 
 function victory() {
-    // Calculate rewards
     let coinsReward = currentLevel.rewards.coins + foundWords.length * 2;
     let xpReward = currentLevel.rewards.xp + Math.floor(foundWords.length / 2);
 
@@ -303,19 +496,14 @@ function victory() {
     if (gameState.xpBoost) xpReward = Math.round(xpReward * 1.5);
 
     gameState.coins += coinsReward;
-    
-    // Mark level as completed
     gameState.completedLevels[currentLevel.id] = true;
-    
-    // Next level unlocked
+
     if (currentLevel.id >= gameState.level) {
         gameState.level = currentLevel.id + 1;
     }
 
-    // Add XP to battle pass
     addXP(xpReward);
 
-    // Update quests
     updateQuest('complete_levels', 1);
     updateQuest('earn_coins', coinsReward);
     if (foundWords.length >= 8) {
@@ -324,15 +512,25 @@ function victory() {
 
     saveGameState();
 
-    // Show victory
     document.getElementById('victory-coins').textContent = coinsReward;
     document.getElementById('victory-exp').textContent = xpReward;
+    document.getElementById('victory-words').textContent = foundWords.length;
+    if (typeof playSound === 'function') playSound('victory');
     showScreen('victory-screen');
 
-    // Show interstitial ad after victory on higher levels
     if (currentLevel.id >= 5 && currentLevel.id % 3 === 0) {
         setTimeout(() => showInterstitialAd(), 1000);
     }
+}
+
+function defeat() {
+    saveGameState();
+    document.getElementById('defeat-level').textContent = currentLevel.id;
+    showScreen('defeat-screen');
+}
+
+function retryLevel() {
+    startLevel(currentLevel.id);
 }
 
 function nextLevel() {
@@ -343,6 +541,26 @@ function nextLevel() {
         showToast('🎉 Вы прошли все уровни!');
         showScreen('main-menu');
     }
+}
+
+// Просмотр рекламы ради бустов (в бою)
+async function watchAdForBoost() {
+    const btn = document.getElementById('boost-ad');
+    if (btn) btn.disabled = true;
+    try {
+        const watched = await showRewardedAd();
+        if (watched) {
+            gameState.boosts.hint += 1;
+            gameState.boosts.shuffle += 1;
+            saveGameState();
+            updateQuest('watch_ad', 1);
+            showToast('📺 +1 💡 подсказка, +1 🔀 перемешивание!');
+            renderBattle();
+        }
+    } catch (err) {
+        console.warn('Ad error:', err);
+    }
+    if (btn) btn.disabled = false;
 }
 
 function resetProgress() {
@@ -360,7 +578,8 @@ function resetProgress() {
             doubleCoins: false,
             xpBoost: false,
             completedLevels: {},
-            stars: {}
+            stars: {},
+            boosts: { hint: 3, undo: 5, shuffle: 1 }
         };
         battlePassState = {
             freeLevel: 1,
